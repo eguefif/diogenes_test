@@ -2,6 +2,7 @@ import diogenes.{new_client}
 import diogenes/health
 import gleam/io
 import gleam/option
+import document_tests
 import index_tests
 
 pub fn main() {
@@ -13,5 +14,6 @@ pub fn main() {
   io.println("...Health works")
 
   index_tests.run(client)
+  document_tests.run(client)
   io.println("All test passes")
 }
