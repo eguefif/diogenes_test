@@ -6,7 +6,7 @@ import gleam/dynamic/decode
 import gleam/erlang/process
 import gleam/json
 import gleam/list
-import gleam/option.{Some}
+import gleam/option.{None, Some}
 import gleam/string
 import log
 
@@ -23,6 +23,7 @@ pub fn run(client) {
   test_list_documents_with_get(client)
   test_list_documents_with_pagination(client)
   test_list_documents_with_fields_filter(client)
+  test_list_documents_with_post(client)
   test_delete_document(client)
   test_delete_all_documents(client)
   teardown(client)
@@ -42,6 +43,19 @@ fn test_add_or_replace_documents(client) {
     document.add_or_replace_documents(client, "movies", movies, movie_encoder)
   process.sleep(1000)
   log.pass("Add or replace documents")
+}
+
+fn test_list_documents_with_post(client) {
+  log.running("List documents with post")
+  let params = document.default_list_documents_params()
+  let assert Ok(MeilisearchResults(results: docs, total:, ..)) =
+    document.list_documents_with_post(client, "movies", params, movie_decoder())
+  assert list.length(docs) == 3
+  assert total == 3
+  list.each(docs, fn(doc) {
+    let Movie(..) = doc
+  })
+  log.pass("List documents with post")
 }
 
 fn test_delete_document(client) {
@@ -90,11 +104,11 @@ fn test_list_documents_with_pagination(client) {
     sansio_document.ListDocumentsParams(
       offset: 0,
       limit: 2,
-      fields: [],
+      fields: sansio_document.All,
       retrieve_vectors: False,
-      ids: [],
+      ids: None,
       filter: "",
-      sort: "",
+      sort: [],
     )
   let assert Ok(MeilisearchResults(results: first_page, total:, ..)) =
     document.list_documents_with_get(client, "movies", params, movie_decoder())
@@ -105,11 +119,11 @@ fn test_list_documents_with_pagination(client) {
     sansio_document.ListDocumentsParams(
       offset: 2,
       limit: 2,
-      fields: [],
+      fields: sansio_document.All,
       retrieve_vectors: False,
-      ids: [],
+      ids: None,
       filter: "",
-      sort: "",
+      sort: [],
     )
   let assert Ok(MeilisearchResults(results: second_page, ..)) =
     document.list_documents_with_get(client, "movies", params2, movie_decoder())
@@ -132,11 +146,11 @@ fn test_list_documents_with_fields_filter(client) {
     sansio_document.ListDocumentsParams(
       offset: 0,
       limit: 20,
-      fields: ["title", "year"],
+      fields: sansio_document.Ids(["title", "year"]),
       retrieve_vectors: False,
-      ids: [],
+      ids: None,
       filter: "",
-      sort: "",
+      sort: [],
     )
   let assert Ok(MeilisearchResults(results: titles, ..)) =
     document.list_documents_with_get(client, "movies", params, title_decoder)
