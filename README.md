@@ -1,24 +1,43 @@
 # diogenes_tests
 
-[![Package Version](https://img.shields.io/hexpm/v/diogenes_tests)](https://hex.pm/packages/diogenes_tests)
-[![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/diogenes_tests/)
+Integration test project for [diogenes](https://github.com/eguefif/diogenes), a Gleam client library for [Meilisearch](https://www.meilisearch.com/).
+
+## Requirements
+
+A running Meilisearch instance at `http://127.0.0.1:7700` with master key `123456789123456789`.
+
+## Running the tests
 
 ```sh
-gleam add diogenes_tests@1
-```
-```gleam
-import diogenes_tests
-
-pub fn main() -> Nil {
-  // TODO: An example of the project in use
-}
+gleam run
 ```
 
-Further documentation can be found at <https://hexdocs.pm/diogenes_tests>.
+## Test coverage
+
+### Health
+
+| Feature | Covered |
+|---|---|
+| Get health | yes |
+
+### Indexes
+
+| Feature | Covered |
+|---|---|
+| List indexes | yes |
+| List indexes with pagination (offset/limit) | yes |
+| Get one index | yes |
+| Create index with primary key | yes |
+| Update primary key | yes |
+| Update uid | yes |
+| Update both uid and primary key | yes |
+| Delete index | yes |
+| Swap indexes | yes |
+| Swap indexes with rename | yes |
+| List index fields | yes |
 
 ## Development
 
 ```sh
-gleam run   # Run the project
-gleam test  # Run the tests
+gleam run   # Run the tests against a live Meilisearch instance
 ```
