@@ -1,4 +1,4 @@
-import diogenes.{MeilisearchResults}
+import diogenes.{MeilisearchResults, MeilisearchSingleResult}
 import diogenes/document
 import diogenes/index
 import diogenes/sansio/document as sansio_document
@@ -24,6 +24,7 @@ pub fn run(client) {
   test_list_documents_with_pagination(client)
   test_list_documents_with_fields_filter(client)
   test_list_documents_with_post(client)
+  test_get_document(client)
   test_delete_document(client)
   test_delete_all_documents(client)
   teardown(client)
@@ -56,6 +57,20 @@ fn test_list_documents_with_post(client) {
     let Movie(..) = doc
   })
   log.pass("List documents with post")
+}
+
+fn test_get_document(client) {
+  log.running("Get document")
+  let params =
+    sansio_document.GetDocumentParams(
+      fields: sansio_document.All,
+      retrieve_vectors: False,
+    )
+  let assert Ok(MeilisearchSingleResult(result: movie)) =
+    document.get_document(client, "movies", "1", params, movie_decoder())
+  assert movie.id == 1
+  assert movie.title == "Inception"
+  log.pass("Get document")
 }
 
 fn test_delete_document(client) {

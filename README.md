@@ -6,6 +6,12 @@ Integration test project for [diogenes](https://github.com/eguefif/diogenes), a 
 
 A running Meilisearch instance at `http://127.0.0.1:7700` with master key `123456789123456789`.
 
+You can start one with the provided Docker Compose file:
+
+```sh
+docker compose up -d
+```
+
 ## Running the tests
 
 ```sh
@@ -35,6 +41,19 @@ gleam run
 | Swap indexes | yes |
 | Swap indexes with rename | yes |
 | List index fields | yes |
+
+### Documents
+
+| Feature | Covered |
+|---|---|
+| Add or replace documents | yes |
+| Get document | yes |
+| List documents with GET | yes |
+| List documents with GET (pagination) | yes |
+| List documents with GET (fields filter) | yes |
+| List documents with POST | yes |
+| Delete document | yes |
+| Delete all documents | yes |
 
 ## Development
 
