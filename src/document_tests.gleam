@@ -20,11 +20,16 @@ pub fn run(client) {
   log.section("Documents")
   setup(client)
   test_add_or_replace_documents(client)
+  test_add_or_replace_documents_with_primary_key(client)
   test_list_documents_with_get(client)
   test_list_documents_with_pagination(client)
   test_list_documents_with_fields_filter(client)
   test_list_documents_with_post(client)
   test_get_document(client)
+  test_add_or_update_documents(client)
+  test_add_or_update_documents_with_skip_creation(client)
+  test_delete_documents_by_batch(client)
+  // TODO: test_delete_documents_by_filter — requires filterable attributes configured via settings API
   test_delete_document(client)
   test_delete_all_documents(client)
   teardown(client)
@@ -40,10 +45,49 @@ fn test_add_or_replace_documents(client) {
     ]),
     Movie(id: 3, title: "Interstellar", year: 2014, genres: ["Sci-Fi", "Drama"]),
   ]
+  let params =
+    sansio_document.AddDocumentsParams(
+      primary_key: None,
+      csv_delimiter: None,
+      custom_metadata: None,
+      skip_creation: None,
+    )
   let assert Ok(_) =
-    document.add_or_replace_documents(client, "movies", movies, movie_encoder)
+    document.add_or_replace_documents(client, "movies", movies, params, movie_encoder)
   process.sleep(1000)
   log.pass("Add or replace documents")
+}
+
+fn test_add_or_replace_documents_with_primary_key(client) {
+  log.running("Add or replace documents with primary key")
+  let movies = [
+    Movie(id: 4, title: "The Matrix", year: 1999, genres: ["Sci-Fi", "Action"]),
+  ]
+  let params =
+    sansio_document.AddDocumentsParams(
+      primary_key: Some("id"),
+      csv_delimiter: None,
+      custom_metadata: None,
+      skip_creation: None,
+    )
+  let assert Ok(_) =
+    document.add_or_replace_documents(client, "movies", movies, params, movie_encoder)
+  process.sleep(1000)
+
+  let get_params =
+    sansio_document.GetDocumentParams(
+      fields: sansio_document.All,
+      retrieve_vectors: False,
+    )
+  let assert Ok(MeilisearchSingleResult(result: movie)) =
+    document.get_document(client, "movies", "4", get_params, movie_decoder())
+  assert movie.id == 4
+  assert movie.title == "The Matrix"
+
+  // Clean up extra document so subsequent tests expect 3 documents
+  let assert Ok(_) = document.delete_document(client, "movies", "4")
+  process.sleep(1000)
+  log.pass("Add or replace documents with primary key")
 }
 
 fn test_list_documents_with_post(client) {
@@ -71,6 +115,117 @@ fn test_get_document(client) {
   assert movie.id == 1
   assert movie.title == "Inception"
   log.pass("Get document")
+}
+
+fn test_add_or_update_documents(client) {
+  log.running("Add or update documents")
+  let params =
+    sansio_document.GetDocumentParams(
+      fields: sansio_document.All,
+      retrieve_vectors: False,
+    )
+
+  let assert Ok(MeilisearchSingleResult(result: before)) =
+    document.get_document(client, "movies", "1", params, movie_decoder())
+
+  let updated = [Movie(id: 1, title: "Inception", year: 1999, genres: ["Sci-Fi"])]
+  let update_params =
+    sansio_document.AddDocumentsParams(
+      primary_key: None,
+      csv_delimiter: None,
+      custom_metadata: None,
+      skip_creation: None,
+    )
+  let assert Ok(_) =
+    document.add_or_update_documents(
+      client,
+      "movies",
+      updated,
+      update_params,
+      movie_encoder,
+    )
+  process.sleep(1000)
+
+  let assert Ok(MeilisearchSingleResult(result: after)) =
+    document.get_document(client, "movies", "1", params, movie_decoder())
+
+  assert before.year != after.year
+  assert after.year == 1999
+  assert before.title == after.title
+  log.pass("Add or update documents")
+}
+
+fn test_add_or_update_documents_with_skip_creation(client) {
+  log.running("Add or update documents with skip creation")
+  let get_params =
+    sansio_document.GetDocumentParams(
+      fields: sansio_document.All,
+      retrieve_vectors: False,
+    )
+
+  // Pass both an existing document update (id: 1) and a new document (id: 99)
+  // with skip_creation: True — existing should be updated, new should NOT be created
+  let mixed = [
+    Movie(id: 1, title: "Inception", year: 2001, genres: ["Sci-Fi"]),
+    Movie(id: 99, title: "Ghost", year: 2000, genres: ["Drama"]),
+  ]
+  let params =
+    sansio_document.AddDocumentsParams(
+      primary_key: None,
+      csv_delimiter: None,
+      custom_metadata: None,
+      skip_creation: Some(True),
+    )
+  let assert Ok(_) =
+    document.add_or_update_documents(client, "movies", mixed, params, movie_encoder)
+  process.sleep(1000)
+
+  let assert Ok(MeilisearchSingleResult(result: updated)) =
+    document.get_document(client, "movies", "1", get_params, movie_decoder())
+  assert updated.year == 2001
+
+  let list_params = document.default_list_documents_params()
+  let assert Ok(MeilisearchResults(results: docs, total:, ..)) =
+    document.list_documents_with_get(client, "movies", list_params, movie_decoder())
+  assert total == 3
+  assert list.all(docs, fn(doc) { doc.id != 99 })
+  log.pass("Add or update documents with skip creation")
+}
+
+fn test_delete_documents_by_batch(client) {
+  log.running("Delete documents by batch")
+  let assert Ok(_) =
+    document.delete_documents_by_batch(client, "movies", ["2", "3"])
+  process.sleep(1000)
+
+  let params = document.default_list_documents_params()
+  let assert Ok(MeilisearchResults(results: docs, total:, ..)) =
+    document.list_documents_with_get(client, "movies", params, movie_decoder())
+  assert total == 1
+  assert list.all(docs, fn(doc) { doc.id == 1 })
+
+  // Re-add deleted movies for subsequent tests
+  let movies = [
+    Movie(id: 2, title: "The Dark Knight", year: 2008, genres: ["Action", "Crime"]),
+    Movie(id: 3, title: "Interstellar", year: 2014, genres: ["Sci-Fi", "Drama"]),
+  ]
+  let add_params =
+    sansio_document.AddDocumentsParams(
+      primary_key: None,
+      csv_delimiter: None,
+      custom_metadata: None,
+      skip_creation: None,
+    )
+  let assert Ok(_) =
+    document.add_or_replace_documents(
+      client,
+      "movies",
+      movies,
+      add_params,
+      movie_encoder,
+    )
+  process.sleep(1000)
+  log.pass("Delete documents by batch")
 }
 
 fn test_delete_document(client) {

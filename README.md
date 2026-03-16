@@ -47,11 +47,16 @@ gleam run
 | Feature | Covered |
 |---|---|
 | Add or replace documents | yes |
+| Add or replace documents (explicit primary key) | yes |
+| Add or update documents | yes |
+| Add or update documents (skip creation) | yes |
 | Get document | yes |
 | List documents with GET | yes |
 | List documents with GET (pagination) | yes |
 | List documents with GET (fields filter) | yes |
 | List documents with POST | yes |
+| Delete documents by batch | yes |
+| Delete documents by filter | no (requires settings API) |
 | Delete document | yes |
 | Delete all documents | yes |
 
