@@ -15,6 +15,8 @@ pub fn run(client) {
   test_dictionary(client)
   test_displayed_attributes(client)
   test_filterable_attributes(client)
+  test_searchable_attributes(client)
+  test_sortable_attributes(client)
   teardown(client)
 }
 
@@ -161,6 +163,69 @@ fn test_reset_filterable_attributes(client) {
     settings.get_filterable_attributes(client, "individual_settings_test")
   assert result == []
   log.pass("Reset filterable attributes")
+}
+
+fn test_searchable_attributes(client) {
+  test_update_searchable_attributes(client)
+  test_reset_searchable_attributes(client)
+}
+
+fn test_update_searchable_attributes(client) {
+  log.running("Update searchable attributes")
+  let assert Ok(_) =
+    settings.update_searchable_attributes(client, "individual_settings_test", [
+      "title", "overview",
+    ])
+  process.sleep(1000)
+
+  let assert Ok(MeilisearchSingleResult(result:)) =
+    settings.get_searchable_attributes(client, "individual_settings_test")
+  assert result == ["title", "overview"]
+  log.pass("Update searchable attributes")
+}
+
+fn test_reset_searchable_attributes(client) {
+  log.running("Reset searchable attributes")
+  let assert Ok(_) =
+    settings.reset_searchable_attributes(client, "individual_settings_test")
+  process.sleep(1000)
+
+  let assert Ok(MeilisearchSingleResult(result:)) =
+    settings.get_searchable_attributes(client, "individual_settings_test")
+  assert result == ["*"]
+  log.pass("Reset searchable attributes")
+}
+
+fn test_sortable_attributes(client) {
+  test_update_sortable_attributes(client)
+  test_reset_sortable_attributes(client)
+}
+
+fn test_update_sortable_attributes(client) {
+  log.running("Update sortable attributes")
+  let assert Ok(_) =
+    settings.update_sortable_attributes(client, "individual_settings_test", [
+      "year", "title",
+    ])
+  process.sleep(1000)
+
+  let assert Ok(MeilisearchSingleResult(result:)) =
+    settings.get_sortable_attributes(client, "individual_settings_test")
+  assert list.sort(result, string.compare)
+    == list.sort(["year", "title"], string.compare)
+  log.pass("Update sortable attributes")
+}
+
+fn test_reset_sortable_attributes(client) {
+  log.running("Reset sortable attributes")
+  let assert Ok(_) =
+    settings.reset_sortable_attributes(client, "individual_settings_test")
+  process.sleep(1000)
+
+  let assert Ok(MeilisearchSingleResult(result:)) =
+    settings.get_sortable_attributes(client, "individual_settings_test")
+  assert result == []
+  log.pass("Reset sortable attributes")
 }
 
 fn setup(client) {
