@@ -44,7 +44,7 @@ fn test_list_settings_defaults(client) {
   assert defaults.faceting.max_values_per_facet == 100
   assert defaults.pagination.max_total_hits == 1000
   assert defaults.facet_search == True
-  assert defaults.prefix_search == sansio_settings.IndexTime
+  assert defaults.prefix_search == option.Some(sansio_settings.IndexingTime)
   log.pass("List settings defaults")
 }
 
@@ -56,12 +56,12 @@ fn test_update_all_settings(client) {
       searchable_attributes: ["title", "overview"],
       filterable_attributes: ["genres", "year"],
       sortable_attributes: ["year", "title"],
-      foreign_keys: [
+      foreign_keys: option.Some([
         sansio_settings.ForeignKey(
           foreign_index_uid: "directors",
           field_name: "director_id",
         ),
-      ],
+      ]),
       ranking_rules: [
         sansio_settings.Words,
         sansio_settings.Typo,
@@ -124,7 +124,10 @@ fn test_update_all_settings(client) {
           document_template: "",
           document_template_max_bytes: 0,
           search_parameters: sansio_settings.ChatSearchParameters(
-            hybrid: sansio_settings.ChatEmbedder(embedder: "", semantic_ratio: 0.0),
+            hybrid: sansio_settings.ChatEmbedder(
+              embedder: "",
+              semantic_ratio: 0.0,
+            ),
             limit: 0,
             sort: [],
             distinct: "",
@@ -135,7 +138,7 @@ fn test_update_all_settings(client) {
         ),
       ),
       search_cutoff_ms: option.Some(1500),
-      localized_attribute: [
+      localized_attribute: option.Some([
         sansio_settings.LocalizedAttribute(
           locales: [sansio_settings.En, sansio_settings.Fr, sansio_settings.De],
           attribute_patterns: ["title", "overview"],
@@ -144,9 +147,9 @@ fn test_update_all_settings(client) {
           locales: [sansio_settings.Ja, sansio_settings.Zh, sansio_settings.Ko],
           attribute_patterns: ["title_*"],
         ),
-      ],
+      ]),
       facet_search: True,
-      prefix_search: sansio_settings.IndexTime,
+      prefix_search: option.Some(sansio_settings.IndexingTime),
     )
   let assert Ok(_) =
     settings.update_all_settings(client, "settings_test", updated)
@@ -177,12 +180,13 @@ fn test_update_all_settings(client) {
   assert result.pagination.max_total_hits == 5000
   assert result.search_cutoff_ms == option.Some(1500)
   assert result.facet_search == True
-  assert result.prefix_search == sansio_settings.IndexTime
+  assert result.prefix_search == option.Some(sansio_settings.IndexingTime)
 
   let genres_sort = dict.get(result.faceting.sort_facet_values_by, "genres")
   assert genres_sort == Ok(sansio_settings.Count)
 
-  assert list.length(result.localized_attribute) == 2
+  let assert option.Some(localized_attribute) = result.localized_attribute
+  assert list.length(localized_attribute) == 2
 
   let car_synonyms = dict.get(result.synonyms, "car")
   assert car_synonyms == Ok(["automobile", "vehicle"])
@@ -240,7 +244,7 @@ fn test_update_prefix_search_disabled(client) {
   let updated =
     sansio_settings.Settings(
       ..base,
-      prefix_search: sansio_settings.PrefixSearchDisabled,
+      prefix_search: option.Some(sansio_settings.PrefixSearchDisabled),
     )
   let assert Ok(_) =
     settings.update_all_settings(client, "settings_test", updated)
@@ -248,7 +252,8 @@ fn test_update_prefix_search_disabled(client) {
 
   let assert Ok(MeilisearchSingleResult(result:)) =
     settings.list_all_settings(client, "settings_test")
-  assert result.prefix_search == sansio_settings.PrefixSearchDisabled
+  assert result.prefix_search
+    == option.Some(sansio_settings.PrefixSearchDisabled)
   log.pass("Update prefix search disabled")
 }
 
@@ -256,40 +261,44 @@ fn test_update_localized_attributes(client) {
   log.running("Update localized attributes with many locales")
   let base = base_settings()
   let updated =
-    sansio_settings.Settings(..base, localized_attribute: [
-      sansio_settings.LocalizedAttribute(
-        locales: [
-          sansio_settings.En,
-          sansio_settings.Fr,
-          sansio_settings.De,
-          sansio_settings.Es,
-          sansio_settings.It,
-          sansio_settings.Pt,
-        ],
-        attribute_patterns: ["title", "overview", "description"],
-      ),
-      sansio_settings.LocalizedAttribute(
-        locales: [
-          sansio_settings.Ja,
-          sansio_settings.Zh,
-          sansio_settings.Ko,
-          sansio_settings.Ar,
-          sansio_settings.Ru,
-        ],
-        attribute_patterns: ["title_*", "overview_*"],
-      ),
-      sansio_settings.LocalizedAttribute(
-        locales: [sansio_settings.Hi, sansio_settings.Bn, sansio_settings.Ur],
-        attribute_patterns: ["content"],
-      ),
-    ])
+    sansio_settings.Settings(
+      ..base,
+      localized_attribute: option.Some([
+        sansio_settings.LocalizedAttribute(
+          locales: [
+            sansio_settings.En,
+            sansio_settings.Fr,
+            sansio_settings.De,
+            sansio_settings.Es,
+            sansio_settings.It,
+            sansio_settings.Pt,
+          ],
+          attribute_patterns: ["title", "overview", "description"],
+        ),
+        sansio_settings.LocalizedAttribute(
+          locales: [
+            sansio_settings.Ja,
+            sansio_settings.Zh,
+            sansio_settings.Ko,
+            sansio_settings.Ar,
+            sansio_settings.Ru,
+          ],
+          attribute_patterns: ["title_*", "overview_*"],
+        ),
+        sansio_settings.LocalizedAttribute(
+          locales: [sansio_settings.Hi, sansio_settings.Bn, sansio_settings.Ur],
+          attribute_patterns: ["content"],
+        ),
+      ]),
+    )
   let assert Ok(_) =
     settings.update_all_settings(client, "settings_test", updated)
   process.sleep(1000)
 
   let assert Ok(MeilisearchSingleResult(result:)) =
     settings.list_all_settings(client, "settings_test")
-  assert list.length(result.localized_attribute) == 3
+  let assert option.Some(localized_attribute) = result.localized_attribute
+  assert list.length(localized_attribute) == 3
   log.pass("Update localized attributes with many locales")
 }
 
@@ -300,7 +309,7 @@ fn base_settings() -> sansio_settings.Settings {
     searchable_attributes: ["*"],
     filterable_attributes: [],
     sortable_attributes: [],
-    foreign_keys: [],
+    foreign_keys: option.None,
     ranking_rules: [
       sansio_settings.Words,
       sansio_settings.Typo,
@@ -357,7 +366,10 @@ fn base_settings() -> sansio_settings.Settings {
         document_template: "",
         document_template_max_bytes: 0,
         search_parameters: sansio_settings.ChatSearchParameters(
-          hybrid: sansio_settings.ChatEmbedder(embedder: "", semantic_ratio: 0.0),
+          hybrid: sansio_settings.ChatEmbedder(
+            embedder: "",
+            semantic_ratio: 0.0,
+          ),
           limit: 0,
           sort: [],
           distinct: "",
@@ -368,9 +380,9 @@ fn base_settings() -> sansio_settings.Settings {
       ),
     ),
     search_cutoff_ms: option.None,
-    localized_attribute: [],
+    localized_attribute: option.None,
     facet_search: True,
-    prefix_search: sansio_settings.IndexTime,
+    prefix_search: option.Some(sansio_settings.IndexingTime),
   )
 }
 

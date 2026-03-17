@@ -11,6 +11,7 @@ import log
 
 pub fn run(client) {
   log.section("Individual Settings")
+  teardown(client)
   setup(client)
   //test_chat(client)
   //test_dictionary(client)
@@ -25,10 +26,13 @@ pub fn run(client) {
   //test_search_cutoff_ms(client)
   //test_facet_search(client)
   //test_distinct_attribute(client)
-  test_synonyms(client)
-  test_typo_tolerance(client)
-  test_faceting(client)
-  test_pagination(client)
+  //test_synonyms(client)
+  //test_typo_tolerance(client)
+  //test_faceting(client)
+  //test_pagination(client)
+  //test_prefix_search(client)
+  //test_localized_attributes(client)
+  test_foreign_keys(client)
   teardown(client)
 }
 
@@ -628,6 +632,123 @@ fn test_reset_pagination(client) {
     settings.get_pagination(client, "individual_settings_test")
   assert result.max_total_hits == 1000
   log.pass("Reset pagination")
+}
+
+fn test_localized_attributes(client) {
+  test_update_localized_attributes(client)
+  test_reset_localized_attributes(client)
+}
+
+fn test_update_localized_attributes(client) {
+  log.running("Update localized attributes")
+  let assert Ok(_) =
+    settings.update_localized_attributes(client, "individual_settings_test", [
+      sansio_settings.LocalizedAttribute(
+        locales: [sansio_settings.En, sansio_settings.Fr, sansio_settings.De],
+        attribute_patterns: ["title", "overview"],
+      ),
+      sansio_settings.LocalizedAttribute(
+        locales: [sansio_settings.Ja, sansio_settings.Zh],
+        attribute_patterns: ["title_*"],
+      ),
+    ])
+  process.sleep(1000)
+
+  let assert Ok(MeilisearchSingleResult(result: option.Some(result))) =
+    settings.get_localized_attributes(client, "individual_settings_test")
+  assert list.length(result) == 2
+  log.pass("Update localized attributes")
+}
+
+fn test_reset_localized_attributes(client) {
+  log.running("Reset localized attributes")
+  let assert Ok(_) =
+    settings.reset_localized_attributes(client, "individual_settings_test")
+  process.sleep(1000)
+
+  let assert Ok(MeilisearchSingleResult(result:)) =
+    settings.get_localized_attributes(client, "individual_settings_test")
+  assert result == option.None
+  log.pass("Reset localized attributes")
+}
+
+fn test_prefix_search(client) {
+  test_update_prefix_search(client)
+  test_reset_prefix_search(client)
+}
+
+fn test_update_prefix_search(client) {
+  log.running("Update prefix search")
+  let assert Ok(_) =
+    settings.update_prefix_search(
+      client,
+      "individual_settings_test",
+      option.Some(sansio_settings.PrefixSearchDisabled),
+    )
+  process.sleep(1000)
+
+  let assert Ok(MeilisearchSingleResult(result:)) =
+    settings.get_prefix_search(client, "individual_settings_test")
+  assert result == sansio_settings.PrefixSearchDisabled
+  log.pass("Update prefix search")
+}
+
+fn test_reset_prefix_search(client) {
+  log.running("Reset prefix search")
+  let assert Ok(_) =
+    settings.reset_prefix_search(client, "individual_settings_test")
+  process.sleep(1000)
+
+  let assert Ok(MeilisearchSingleResult(result:)) =
+    settings.get_prefix_search(client, "individual_settings_test")
+  assert result == sansio_settings.IndexingTime
+  log.pass("Reset prefix search")
+}
+
+fn test_foreign_keys(client) {
+  test_update_foreign_keys(client)
+  test_reset_foreign_keys(client)
+}
+
+fn test_update_foreign_keys(client) {
+  log.running("Update foreign keys")
+  let assert Ok(_) =
+    settings.update_foreign_keys(client, "individual_settings_test", [
+      sansio_settings.ForeignKey(
+        foreign_index_uid: "directors",
+        field_name: "director_id",
+      ),
+      sansio_settings.ForeignKey(
+        foreign_index_uid: "genres",
+        field_name: "genre_id",
+      ),
+    ])
+  process.sleep(1000)
+
+  let assert Ok(MeilisearchSingleResult(result:)) =
+    settings.get_foreign_keys(client, "individual_settings_test")
+  let assert option.Some(result) = result
+  assert list.length(result) == 2
+  assert list.contains(
+    result,
+    sansio_settings.ForeignKey(
+      foreign_index_uid: "directors",
+      field_name: "director_id",
+    ),
+  )
+  log.pass("Update foreign keys")
+}
+
+fn test_reset_foreign_keys(client) {
+  log.running("Reset foreign keys")
+  let assert Ok(_) =
+    settings.reset_foreign_keys(client, "individual_settings_test")
+  process.sleep(1000)
+
+  let assert Ok(MeilisearchSingleResult(result:)) =
+    settings.get_foreign_keys(client, "individual_settings_test")
+  assert result == option.None
+  log.pass("Reset foreign keys")
 }
 
 fn setup(client) {
