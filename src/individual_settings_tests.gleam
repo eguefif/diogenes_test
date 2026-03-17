@@ -21,6 +21,7 @@ pub fn run(client) {
   //test_separator_tokens(client)
   //test_stop_words(client)
   test_ranking_rules(client)
+  test_search_cutoff_ms(client)
   teardown(client)
 }
 
@@ -362,7 +363,6 @@ fn test_reset_ranking_rules(client) {
 
   let assert Ok(MeilisearchSingleResult(result:)) =
     settings.get_ranking_rules(client, "individual_settings_test")
-  log.running(string.inspect(result))
   assert result
     == [
       sansio_settings.Words,
@@ -374,6 +374,35 @@ fn test_reset_ranking_rules(client) {
       sansio_settings.Exactness,
     ]
   log.pass("Reset ranking rules")
+}
+
+fn test_search_cutoff_ms(client) {
+  test_update_search_cutoff_ms(client)
+  test_reset_search_cutoff_ms(client)
+}
+
+fn test_update_search_cutoff_ms(client) {
+  log.running("Update search cutoff ms")
+  let assert Ok(_) =
+    settings.update_search_cutoff_ms(client, "individual_settings_test", 150)
+  process.sleep(1000)
+
+  let assert Ok(MeilisearchSingleResult(result:)) =
+    settings.get_search_cutoff_ms(client, "individual_settings_test")
+  assert result == option.Some(150)
+  log.pass("Update search cutoff ms")
+}
+
+fn test_reset_search_cutoff_ms(client) {
+  log.running("Reset search cutoff ms")
+  let assert Ok(_) =
+    settings.reset_search_cutoff_ms(client, "individual_settings_test")
+  process.sleep(1000)
+
+  let assert Ok(MeilisearchSingleResult(result:)) =
+    settings.get_search_cutoff_ms(client, "individual_settings_test")
+  assert result == option.None
+  log.pass("Reset search cutoff ms")
 }
 
 fn setup(client) {

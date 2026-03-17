@@ -134,7 +134,7 @@ fn test_update_all_settings(client) {
           ),
         ),
       ),
-      search_cutoff_ms: 1500,
+      search_cutoff_ms: option.Some(1500),
       localized_attribute: [
         sansio_settings.LocalizedAttribute(
           locales: [sansio_settings.En, sansio_settings.Fr, sansio_settings.De],
@@ -175,7 +175,7 @@ fn test_update_all_settings(client) {
   assert result.typo_tolerance.disable_on_attributes == ["title"]
   assert result.faceting.max_values_per_facet == 200
   assert result.pagination.max_total_hits == 5000
-  assert result.search_cutoff_ms == 1500
+  assert result.search_cutoff_ms == option.Some(1500)
   assert result.facet_search == True
   assert result.prefix_search == sansio_settings.IndexTime
 
@@ -367,7 +367,7 @@ fn base_settings() -> sansio_settings.Settings {
         ),
       ),
     ),
-    search_cutoff_ms: 1500,
+    search_cutoff_ms: option.None,
     localized_attribute: [],
     facet_search: True,
     prefix_search: sansio_settings.IndexTime,
