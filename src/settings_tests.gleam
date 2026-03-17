@@ -116,21 +116,21 @@ fn test_update_all_settings(client) {
         search_embedder: option.None,
         indexing_embedder: option.None,
         distribution: sansio_settings.Distribution(
-          current_mean: 0,
-          current_sigma: 0,
+          current_mean: 0.0,
+          current_sigma: 0.0,
         ),
         chat: sansio_settings.Chat(
           description: "",
           document_template: "",
           document_template_max_bytes: 0,
-          search_paramters: sansio_settings.ChatSearchParameters(
-            hybrid: sansio_settings.ChatEmbedder(embedder: "", semantic_ratio: 0),
+          search_parameters: sansio_settings.ChatSearchParameters(
+            hybrid: sansio_settings.ChatEmbedder(embedder: "", semantic_ratio: 0.0),
             limit: 0,
             sort: [],
             distinct: "",
             matching_strategy: sansio_settings.Last,
             attributes_to_search_on: [],
-            search_parameters: [],
+            ranking_score_threshold: option.None,
           ),
         ),
       ),
@@ -349,21 +349,21 @@ fn base_settings() -> sansio_settings.Settings {
       search_embedder: option.None,
       indexing_embedder: option.None,
       distribution: sansio_settings.Distribution(
-        current_mean: 0,
-        current_sigma: 0,
+        current_mean: 0.0,
+        current_sigma: 0.0,
       ),
       chat: sansio_settings.Chat(
         description: "",
         document_template: "",
         document_template_max_bytes: 0,
-        search_paramters: sansio_settings.ChatSearchParameters(
-          hybrid: sansio_settings.ChatEmbedder(embedder: "", semantic_ratio: 0),
+        search_parameters: sansio_settings.ChatSearchParameters(
+          hybrid: sansio_settings.ChatEmbedder(embedder: "", semantic_ratio: 0.0),
           limit: 0,
           sort: [],
           distinct: "",
           matching_strategy: sansio_settings.Last,
           attributes_to_search_on: [],
-          search_parameters: [],
+          ranking_score_threshold: option.None,
         ),
       ),
     ),

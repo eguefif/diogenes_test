@@ -1,9 +1,10 @@
 import diogenes.{new_client}
 import diogenes/health
 import gleam/option
+import individual_settings_tests
 import log
-import settings_tests
 
+//import settings_tests
 //import document_tests
 //import index_tests
 
@@ -18,4 +19,5 @@ pub fn main() {
   //index_tests.run(client)
   //document_tests.run(client)
   //settings_tests.run(client)
+  individual_settings_tests.run(client)
 }
