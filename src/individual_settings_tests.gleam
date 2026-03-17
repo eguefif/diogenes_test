@@ -22,6 +22,7 @@ pub fn run(client) {
   //test_stop_words(client)
   test_ranking_rules(client)
   test_search_cutoff_ms(client)
+  test_facet_search(client)
   teardown(client)
 }
 
@@ -403,6 +404,35 @@ fn test_reset_search_cutoff_ms(client) {
     settings.get_search_cutoff_ms(client, "individual_settings_test")
   assert result == option.None
   log.pass("Reset search cutoff ms")
+}
+
+fn test_facet_search(client) {
+  test_update_facet_search(client)
+  test_reset_facet_search(client)
+}
+
+fn test_update_facet_search(client) {
+  log.running("Update facet search")
+  let assert Ok(_) =
+    settings.update_facet_search(client, "individual_settings_test", False)
+  process.sleep(1000)
+
+  let assert Ok(MeilisearchSingleResult(result:)) =
+    settings.get_facet_search(client, "individual_settings_test")
+  assert result == False
+  log.pass("Update facet search")
+}
+
+fn test_reset_facet_search(client) {
+  log.running("Reset facet search")
+  let assert Ok(_) =
+    settings.reset_facet_search(client, "individual_settings_test")
+  process.sleep(1000)
+
+  let assert Ok(MeilisearchSingleResult(result:)) =
+    settings.get_facet_search(client, "individual_settings_test")
+  assert result == True
+  log.pass("Reset facet search")
 }
 
 fn setup(client) {
