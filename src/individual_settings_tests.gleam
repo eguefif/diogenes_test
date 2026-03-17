@@ -1,8 +1,8 @@
 import diogenes.{MeilisearchSingleResult}
-import gleam/dict
 import diogenes/index
 import diogenes/sansio/settings as sansio_settings
 import diogenes/settings
+import gleam/dict
 import gleam/erlang/process
 import gleam/list
 import gleam/option.{Some}
@@ -26,6 +26,8 @@ pub fn run(client) {
   //test_facet_search(client)
   //test_distinct_attribute(client)
   test_synonyms(client)
+  test_typo_tolerance(client)
+  test_faceting(client)
   teardown(client)
 }
 
@@ -475,10 +477,14 @@ fn test_synonyms(client) {
 fn test_update_synonyms(client) {
   log.running("Update synonyms")
   let assert Ok(_) =
-    settings.update_synonyms(client, "individual_settings_test", dict.from_list([
-      #("wolverine", ["xmen", "logan"]),
-      #("car", ["automobile", "vehicle"]),
-    ]))
+    settings.update_synonyms(
+      client,
+      "individual_settings_test",
+      dict.from_list([
+        #("wolverine", ["xmen", "logan"]),
+        #("car", ["automobile", "vehicle"]),
+      ]),
+    )
   process.sleep(1000)
 
   let assert Ok(MeilisearchSingleResult(result:)) =
@@ -490,14 +496,104 @@ fn test_update_synonyms(client) {
 
 fn test_reset_synonyms(client) {
   log.running("Reset synonyms")
-  let assert Ok(_) =
-    settings.reset_synonyms(client, "individual_settings_test")
+  let assert Ok(_) = settings.reset_synonyms(client, "individual_settings_test")
   process.sleep(1000)
 
   let assert Ok(MeilisearchSingleResult(result:)) =
     settings.get_synonyms(client, "individual_settings_test")
   assert result == dict.new()
   log.pass("Reset synonyms")
+}
+
+fn test_typo_tolerance(client) {
+  test_update_typo_tolerance(client)
+  test_reset_typo_tolerance(client)
+}
+
+fn test_update_typo_tolerance(client) {
+  log.running("Update typo tolerance")
+  let assert Ok(_) =
+    settings.update_typo_tolerance(
+      client,
+      "individual_settings_test",
+      sansio_settings.TypoTolerance(
+        enabled: False,
+        min_word_size_for_typo: sansio_settings.MinWordSizeForTypo(
+          one_typo: 6,
+          two_typos: 10,
+        ),
+        disable_on_words: ["shogun", "iphone"],
+        disable_on_attributes: ["title"],
+      ),
+    )
+  process.sleep(1000)
+
+  let assert Ok(MeilisearchSingleResult(result:)) =
+    settings.get_typo_tolerance(client, "individual_settings_test")
+  assert result.enabled == False
+  assert result.min_word_size_for_typo.one_typo == 6
+  assert result.min_word_size_for_typo.two_typos == 10
+  assert list.sort(result.disable_on_words, string.compare)
+    == ["iphone", "shogun"]
+  assert result.disable_on_attributes == ["title"]
+  log.pass("Update typo tolerance")
+}
+
+fn test_reset_typo_tolerance(client) {
+  log.running("Reset typo tolerance")
+  let assert Ok(_) =
+    settings.reset_typo_tolerance(client, "individual_settings_test")
+  process.sleep(1000)
+
+  let assert Ok(MeilisearchSingleResult(result:)) =
+    settings.get_typo_tolerance(client, "individual_settings_test")
+  assert result.enabled == True
+  assert result.min_word_size_for_typo.one_typo == 5
+  assert result.min_word_size_for_typo.two_typos == 9
+  assert result.disable_on_words == []
+  assert result.disable_on_attributes == []
+  log.pass("Reset typo tolerance")
+}
+
+fn test_faceting(client) {
+  test_update_faceting(client)
+  test_reset_faceting(client)
+}
+
+fn test_update_faceting(client) {
+  log.running("Update faceting")
+  let assert Ok(_) =
+    settings.update_faceting(
+      client,
+      "individual_settings_test",
+      sansio_settings.Faceting(
+        max_values_per_facet: 200,
+        sort_facet_values_by: dict.from_list([
+          #("*", sansio_settings.Alpha),
+          #("genres", sansio_settings.Count),
+        ]),
+      ),
+    )
+  process.sleep(1000)
+
+  let assert Ok(MeilisearchSingleResult(result:)) =
+    settings.get_faceting(client, "individual_settings_test")
+  assert result.max_values_per_facet == 200
+  assert dict.get(result.sort_facet_values_by, "genres")
+    == Ok(sansio_settings.Count)
+  log.pass("Update faceting")
+}
+
+fn test_reset_faceting(client) {
+  log.running("Reset faceting")
+  let assert Ok(_) = settings.reset_faceting(client, "individual_settings_test")
+  process.sleep(1000)
+
+  let assert Ok(MeilisearchSingleResult(result:)) =
+    settings.get_faceting(client, "individual_settings_test")
+  assert result.max_values_per_facet == 100
+  assert dict.get(result.sort_facet_values_by, "*") == Ok(sansio_settings.Alpha)
+  log.pass("Reset faceting")
 }
 
 fn setup(client) {
