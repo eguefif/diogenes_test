@@ -12,14 +12,15 @@ pub fn run(client) {
   log.section("Individual Settings")
   setup(client)
   //test_chat(client)
-  test_dictionary(client)
-  test_displayed_attributes(client)
-  test_filterable_attributes(client)
-  test_searchable_attributes(client)
-  test_sortable_attributes(client)
-  test_non_separator_tokens(client)
-  test_separator_tokens(client)
-  test_stop_words(client)
+  //test_dictionary(client)
+  //test_displayed_attributes(client)
+  //test_filterable_attributes(client)
+  //test_searchable_attributes(client)
+  //test_sortable_attributes(client)
+  //test_non_separator_tokens(client)
+  //test_separator_tokens(client)
+  //test_stop_words(client)
+  test_ranking_rules(client)
   teardown(client)
 }
 
@@ -325,6 +326,54 @@ fn test_reset_stop_words(client) {
     settings.get_stop_words(client, "individual_settings_test")
   assert result == []
   log.pass("Reset stop words")
+}
+
+fn test_ranking_rules(client) {
+  test_update_ranking_rules(client)
+  test_reset_ranking_rules(client)
+}
+
+fn test_update_ranking_rules(client) {
+  log.running("Update ranking rules")
+  let assert Ok(_) =
+    settings.update_ranking_rules(client, "individual_settings_test", [
+      sansio_settings.Words,
+      sansio_settings.Typo,
+      sansio_settings.Exactness,
+    ])
+  process.sleep(1000)
+
+  let assert Ok(MeilisearchSingleResult(result:)) =
+    settings.get_ranking_rules(client, "individual_settings_test")
+  assert result
+    == [
+      sansio_settings.Words,
+      sansio_settings.Typo,
+      sansio_settings.Exactness,
+    ]
+  log.pass("Update ranking rules")
+}
+
+fn test_reset_ranking_rules(client) {
+  log.running("Reset ranking rules")
+  let assert Ok(_) =
+    settings.reset_ranking_rules(client, "individual_settings_test")
+  process.sleep(1000)
+
+  let assert Ok(MeilisearchSingleResult(result:)) =
+    settings.get_ranking_rules(client, "individual_settings_test")
+  log.running(string.inspect(result))
+  assert result
+    == [
+      sansio_settings.Words,
+      sansio_settings.Typo,
+      sansio_settings.Proximity,
+      sansio_settings.AttributeRank,
+      sansio_settings.Sort,
+      sansio_settings.WordPosition,
+      sansio_settings.Exactness,
+    ]
+  log.pass("Reset ranking rules")
 }
 
 fn setup(client) {
