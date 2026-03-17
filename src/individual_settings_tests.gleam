@@ -17,6 +17,9 @@ pub fn run(client) {
   test_filterable_attributes(client)
   test_searchable_attributes(client)
   test_sortable_attributes(client)
+  test_non_separator_tokens(client)
+  test_separator_tokens(client)
+  test_stop_words(client)
   teardown(client)
 }
 
@@ -226,6 +229,102 @@ fn test_reset_sortable_attributes(client) {
     settings.get_sortable_attributes(client, "individual_settings_test")
   assert result == []
   log.pass("Reset sortable attributes")
+}
+
+fn test_non_separator_tokens(client) {
+  test_update_non_separator_tokens(client)
+  test_reset_non_separator_tokens(client)
+}
+
+fn test_update_non_separator_tokens(client) {
+  log.running("Update non separator tokens")
+  let assert Ok(_) =
+    settings.update_non_separator_tokens(client, "individual_settings_test", [
+      "@", "#",
+    ])
+  process.sleep(1000)
+
+  let assert Ok(MeilisearchSingleResult(result:)) =
+    settings.get_non_separator_tokens(client, "individual_settings_test")
+  assert list.sort(result, string.compare)
+    == list.sort(["@", "#"], string.compare)
+  log.pass("Update non separator tokens")
+}
+
+fn test_reset_non_separator_tokens(client) {
+  log.running("Reset non separator tokens")
+  let assert Ok(_) =
+    settings.reset_non_separator_tokens(client, "individual_settings_test")
+  process.sleep(1000)
+
+  let assert Ok(MeilisearchSingleResult(result:)) =
+    settings.get_non_separator_tokens(client, "individual_settings_test")
+  assert result == []
+  log.pass("Reset non separator tokens")
+}
+
+fn test_separator_tokens(client) {
+  test_update_separator_tokens(client)
+  test_reset_separator_tokens(client)
+}
+
+fn test_update_separator_tokens(client) {
+  log.running("Update separator tokens")
+  let assert Ok(_) =
+    settings.update_separator_tokens(client, "individual_settings_test", [
+      "|", "/",
+    ])
+  process.sleep(1000)
+
+  let assert Ok(MeilisearchSingleResult(result:)) =
+    settings.get_separator_tokens(client, "individual_settings_test")
+  assert list.sort(result, string.compare)
+    == list.sort(["|", "/"], string.compare)
+  log.pass("Update separator tokens")
+}
+
+fn test_reset_separator_tokens(client) {
+  log.running("Reset separator tokens")
+  let assert Ok(_) =
+    settings.reset_separator_tokens(client, "individual_settings_test")
+  process.sleep(1000)
+
+  let assert Ok(MeilisearchSingleResult(result:)) =
+    settings.get_separator_tokens(client, "individual_settings_test")
+  assert result == []
+  log.pass("Reset separator tokens")
+}
+
+fn test_stop_words(client) {
+  test_update_stop_words(client)
+  test_reset_stop_words(client)
+}
+
+fn test_update_stop_words(client) {
+  log.running("Update stop words")
+  let assert Ok(_) =
+    settings.update_stop_words(client, "individual_settings_test", [
+      "the", "a", "an",
+    ])
+  process.sleep(1000)
+
+  let assert Ok(MeilisearchSingleResult(result:)) =
+    settings.get_stop_words(client, "individual_settings_test")
+  assert list.sort(result, string.compare)
+    == list.sort(["the", "a", "an"], string.compare)
+  log.pass("Update stop words")
+}
+
+fn test_reset_stop_words(client) {
+  log.running("Reset stop words")
+  let assert Ok(_) =
+    settings.reset_stop_words(client, "individual_settings_test")
+  process.sleep(1000)
+
+  let assert Ok(MeilisearchSingleResult(result:)) =
+    settings.get_stop_words(client, "individual_settings_test")
+  assert result == []
+  log.pass("Reset stop words")
 }
 
 fn setup(client) {
