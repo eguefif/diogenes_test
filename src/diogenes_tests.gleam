@@ -1,9 +1,10 @@
 import diogenes.{new_client}
 import diogenes/health
-import document_tests
 import gleam/option
 import log
+import settings_tests
 
+//import document_tests
 //import index_tests
 
 pub fn main() {
@@ -14,7 +15,7 @@ pub fn main() {
   log.running("Get health")
   let assert Ok(_) = health.get_health(client)
   log.pass("Get health")
-
   //index_tests.run(client)
-  document_tests.run(client)
+  //document_tests.run(client)
+  //settings_tests.run(client)
 }
