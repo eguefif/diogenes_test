@@ -28,6 +28,7 @@ pub fn run(client) {
   test_synonyms(client)
   test_typo_tolerance(client)
   test_faceting(client)
+  test_pagination(client)
   teardown(client)
 }
 
@@ -594,6 +595,39 @@ fn test_reset_faceting(client) {
   assert result.max_values_per_facet == 100
   assert dict.get(result.sort_facet_values_by, "*") == Ok(sansio_settings.Alpha)
   log.pass("Reset faceting")
+}
+
+fn test_pagination(client) {
+  test_update_pagination(client)
+  test_reset_pagination(client)
+}
+
+fn test_update_pagination(client) {
+  log.running("Update pagination")
+  let assert Ok(_) =
+    settings.update_pagination(
+      client,
+      "individual_settings_test",
+      sansio_settings.Pagination(max_total_hits: 5000),
+    )
+  process.sleep(1000)
+
+  let assert Ok(MeilisearchSingleResult(result:)) =
+    settings.get_pagination(client, "individual_settings_test")
+  assert result.max_total_hits == 5000
+  log.pass("Update pagination")
+}
+
+fn test_reset_pagination(client) {
+  log.running("Reset pagination")
+  let assert Ok(_) =
+    settings.reset_pagination(client, "individual_settings_test")
+  process.sleep(1000)
+
+  let assert Ok(MeilisearchSingleResult(result:)) =
+    settings.get_pagination(client, "individual_settings_test")
+  assert result.max_total_hits == 1000
+  log.pass("Reset pagination")
 }
 
 fn setup(client) {
