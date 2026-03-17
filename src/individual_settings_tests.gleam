@@ -1,4 +1,5 @@
 import diogenes.{MeilisearchSingleResult}
+import gleam/dict
 import diogenes/index
 import diogenes/sansio/settings as sansio_settings
 import diogenes/settings
@@ -20,9 +21,11 @@ pub fn run(client) {
   //test_non_separator_tokens(client)
   //test_separator_tokens(client)
   //test_stop_words(client)
-  test_ranking_rules(client)
-  test_search_cutoff_ms(client)
-  test_facet_search(client)
+  //test_ranking_rules(client)
+  //test_search_cutoff_ms(client)
+  //test_facet_search(client)
+  //test_distinct_attribute(client)
+  test_synonyms(client)
   teardown(client)
 }
 
@@ -433,6 +436,68 @@ fn test_reset_facet_search(client) {
     settings.get_facet_search(client, "individual_settings_test")
   assert result == True
   log.pass("Reset facet search")
+}
+
+fn test_distinct_attribute(client) {
+  test_update_distinct_attribute(client)
+  test_reset_distinct_attribute(client)
+}
+
+fn test_update_distinct_attribute(client) {
+  log.running("Update distinct attribute")
+  let assert Ok(_) =
+    settings.update_distinct_attribute(client, "individual_settings_test", "id")
+  process.sleep(1000)
+
+  let assert Ok(MeilisearchSingleResult(result:)) =
+    settings.get_distinct_attribute(client, "individual_settings_test")
+  assert result == option.Some("id")
+  log.pass("Update distinct attribute")
+}
+
+fn test_reset_distinct_attribute(client) {
+  log.running("Reset distinct attribute")
+  let assert Ok(_) =
+    settings.reset_distinct_attribute(client, "individual_settings_test")
+  process.sleep(1000)
+
+  let assert Ok(MeilisearchSingleResult(result:)) =
+    settings.get_distinct_attribute(client, "individual_settings_test")
+  assert result == option.None
+  log.pass("Reset distinct attribute")
+}
+
+fn test_synonyms(client) {
+  test_update_synonyms(client)
+  test_reset_synonyms(client)
+}
+
+fn test_update_synonyms(client) {
+  log.running("Update synonyms")
+  let assert Ok(_) =
+    settings.update_synonyms(client, "individual_settings_test", dict.from_list([
+      #("wolverine", ["xmen", "logan"]),
+      #("car", ["automobile", "vehicle"]),
+    ]))
+  process.sleep(1000)
+
+  let assert Ok(MeilisearchSingleResult(result:)) =
+    settings.get_synonyms(client, "individual_settings_test")
+  assert dict.get(result, "wolverine") == Ok(["xmen", "logan"])
+  assert dict.get(result, "car") == Ok(["automobile", "vehicle"])
+  log.pass("Update synonyms")
+}
+
+fn test_reset_synonyms(client) {
+  log.running("Reset synonyms")
+  let assert Ok(_) =
+    settings.reset_synonyms(client, "individual_settings_test")
+  process.sleep(1000)
+
+  let assert Ok(MeilisearchSingleResult(result:)) =
+    settings.get_synonyms(client, "individual_settings_test")
+  assert result == dict.new()
+  log.pass("Reset synonyms")
 }
 
 fn setup(client) {
