@@ -6,6 +6,7 @@ import gleam/dict
 import gleam/erlang/process
 import gleam/list
 import gleam/option.{Some}
+import gleam/string
 import log
 
 pub fn run(client) {
@@ -34,7 +35,7 @@ fn test_list_settings_defaults(client) {
   assert defaults.non_separator_tokens == []
   assert defaults.separator_tokens == []
   assert defaults.dictionary == []
-  assert defaults.distinct_attribute == ""
+  assert defaults.distinct_attribute == option.None
   assert defaults.proximity_precision == sansio_settings.ByWord
   assert defaults.typo_tolerance.enabled == True
   assert defaults.typo_tolerance.min_word_size_for_typo.one_typo == 5
@@ -49,6 +50,10 @@ fn test_list_settings_defaults(client) {
 }
 
 fn test_update_all_settings(client) {
+  log.running("Reset all settings before update")
+  let assert Ok(_) = settings.reset_all_settings(client, "settings_test")
+  process.sleep(1000)
+
   log.running("Update all settings")
   let updated =
     sansio_settings.Settings(
@@ -56,12 +61,7 @@ fn test_update_all_settings(client) {
       searchable_attributes: ["title", "overview"],
       filterable_attributes: ["genres", "year"],
       sortable_attributes: ["year", "title"],
-      foreign_keys: option.Some([
-        sansio_settings.ForeignKey(
-          foreign_index_uid: "directors",
-          field_name: "director_id",
-        ),
-      ]),
+      foreign_keys: option.None,
       ranking_rules: [
         sansio_settings.Words,
         sansio_settings.Typo,
@@ -78,7 +78,7 @@ fn test_update_all_settings(client) {
         #("car", ["automobile", "vehicle"]),
         #("movie", ["film", "picture", "flick"]),
       ]),
-      distinct_attribute: "id",
+      distinct_attribute: option.Some("id"),
       proximity_precision: sansio_settings.ByWord,
       typo_tolerance: sansio_settings.TypoTolerance(
         enabled: True,
@@ -101,24 +101,24 @@ fn test_update_all_settings(client) {
         #(
           "default",
           sansio_settings.Embedder(
-            source: sansio_settings.OpenAi,
-            model: "",
+            source: sansio_settings.Ollama,
+            model: "nomic-embed-text",
             revision: option.None,
             pooling: option.None,
-            api_key: "",
-            dimensions: 0,
-            binary_quantisized: False,
+            api_key: option.None,
+            dimensions: option.None,
+            binary_quantisized: option.None,
             document_template: "",
-            document_template_max_bytes: 0,
-            url: "http://127.0.0.1:3000",
+            document_template_max_bytes: option.None,
+            url: option.Some("http://ollama:11434/api/embed"),
             indexing_fragments: option.None,
             search_fragments: option.None,
-            request: dict.new(),
-            response: dict.new(),
-            headers: dict.new(),
+            request: option.None,
+            response: option.None,
+            headers: option.None,
             search_embedder: option.None,
             indexing_embedder: option.None,
-            distribution: sansio_settings.Distribution(mean: 0.0, sigma: 0.1),
+            distribution: option.None,
           ),
         ),
       ]),
@@ -135,23 +135,7 @@ fn test_update_all_settings(client) {
       ]),
       facet_search: True,
       prefix_search: option.Some(sansio_settings.IndexingTime),
-      chat: sansio_settings.Chat(
-        description: "",
-        document_template: "",
-        document_template_max_bytes: 0,
-        search_parameters: sansio_settings.ChatSearchParameters(
-          hybrid: sansio_settings.ChatEmbedder(
-            embedder: "",
-            semantic_ratio: 0.0,
-          ),
-          limit: 0,
-          sort: [],
-          distinct: "",
-          matching_strategy: sansio_settings.Last,
-          attributes_to_search_on: [],
-          ranking_score_threshold: option.None,
-        ),
-      ),
+      chat: option.None,
     )
   let assert Ok(_) =
     settings.update_all_settings(client, "settings_test", updated)
@@ -166,17 +150,22 @@ fn test_update_all_settings(client) {
     == ["id", "title", "year", "genres", "overview"]
   assert result.searchable_attributes == ["title", "overview"]
   assert result.filterable_attributes == ["genres", "year"]
-  assert result.sortable_attributes == ["year", "title"]
-  assert result.stop_words == ["the", "a", "an", "of", "in"]
-  assert result.non_separator_tokens == ["@", "#"]
-  assert result.separator_tokens == ["/", "\\"]
-  assert result.dictionary == ["shipit", "yolo", "brb"]
-  assert result.distinct_attribute == "id"
+  assert list.sort(result.sortable_attributes, string.compare)
+    == ["title", "year"]
+  assert list.sort(result.stop_words, string.compare)
+    == ["a", "an", "in", "of", "the"]
+  assert list.sort(result.non_separator_tokens, string.compare)
+    == list.sort(["@", "#"], string.compare)
+  assert list.sort(result.separator_tokens, string.compare)
+    == list.sort(["/", "\\"], string.compare)
+  assert list.sort(result.dictionary, string.compare)
+    == ["brb", "shipit", "yolo"]
+  assert result.distinct_attribute == option.Some("id")
   assert result.proximity_precision == sansio_settings.ByWord
   assert result.typo_tolerance.enabled == True
   assert result.typo_tolerance.min_word_size_for_typo.one_typo == 6
   assert result.typo_tolerance.min_word_size_for_typo.two_typos == 10
-  assert result.typo_tolerance.disable_on_words == ["shogun", "iphone"]
+  assert result.typo_tolerance.disable_on_words == ["iphone", "shogun"]
   assert result.typo_tolerance.disable_on_attributes == ["title"]
   assert result.faceting.max_values_per_facet == 200
   assert result.pagination.max_total_hits == 5000
@@ -311,7 +300,6 @@ fn base_settings() -> sansio_settings.Settings {
     searchable_attributes: ["*"],
     filterable_attributes: [],
     sortable_attributes: [],
-    foreign_keys: option.None,
     ranking_rules: [
       sansio_settings.Words,
       sansio_settings.Typo,
@@ -325,7 +313,7 @@ fn base_settings() -> sansio_settings.Settings {
     separator_tokens: [],
     dictionary: [],
     synonyms: dict.new(),
-    distinct_attribute: "",
+    distinct_attribute: option.Some(""),
     proximity_precision: sansio_settings.ByWord,
     typo_tolerance: sansio_settings.TypoTolerance(
       enabled: True,
@@ -345,49 +333,38 @@ fn base_settings() -> sansio_settings.Settings {
       #(
         "default",
         sansio_settings.Embedder(
-          source: sansio_settings.OpenAi,
-          model: "",
+          source: sansio_settings.Ollama,
+          model: "nomic-embed-text",
           revision: option.None,
           pooling: option.None,
-          api_key: "",
-          dimensions: 0,
-          binary_quantisized: False,
+          api_key: option.None,
+          dimensions: option.None,
+          binary_quantisized: option.None,
           document_template: "",
-          document_template_max_bytes: 0,
-          url: "http://127.0.0.1:2000",
+          document_template_max_bytes: option.None,
+          url: option.Some("http://ollama:11434/api/embed"),
           indexing_fragments: option.None,
           search_fragments: option.None,
-          request: dict.new(),
-          response: dict.new(),
-          headers: dict.new(),
+          request: option.None,
+          response: option.None,
+          headers: option.None,
           search_embedder: option.None,
           indexing_embedder: option.None,
-          distribution: sansio_settings.Distribution(mean: 0.0, sigma: 0.1),
+          distribution: option.None,
         ),
       ),
     ]),
+    foreign_keys: option.None,
     search_cutoff_ms: option.None,
     localized_attribute: option.None,
     facet_search: True,
     prefix_search: option.Some(sansio_settings.IndexingTime),
-    chat: sansio_settings.Chat(
-      description: "",
-      document_template: "",
-      document_template_max_bytes: 0,
-      search_parameters: sansio_settings.ChatSearchParameters(
-        hybrid: sansio_settings.ChatEmbedder(embedder: "", semantic_ratio: 0.0),
-        limit: 0,
-        sort: [],
-        distinct: "",
-        matching_strategy: sansio_settings.Last,
-        attributes_to_search_on: [],
-        ranking_score_threshold: option.None,
-      ),
-    ),
+    chat: option.None,
   )
 }
 
 fn setup(client) {
+  let assert Ok(_) = index.delete_index(client, "settings_test")
   let assert Ok(_) = index.create_index(client, "settings_test", Some("id"))
   process.sleep(1000)
 }

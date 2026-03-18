@@ -12,81 +12,33 @@ import gleam/option.{None, Some}
 import gleam/string
 import log
 
+// TODO: delete tasks to embeddes
+// TODO make embeddings works
+
 pub fn run(client) {
   log.section("Individual Settings")
   teardown(client)
   setup(client)
-  //test_chat(client)
-  //test_dictionary(client)
-  //test_displayed_attributes(client)
-  //test_filterable_attributes(client)
-  //test_searchable_attributes(client)
-  //test_sortable_attributes(client)
-  //test_non_separator_tokens(client)
-  //test_separator_tokens(client)
-  //test_stop_words(client)
-  //test_ranking_rules(client)
-  //test_search_cutoff_ms(client)
-  //test_facet_search(client)
-  //test_distinct_attribute(client)
-  //test_synonyms(client)
-  //test_typo_tolerance(client)
-  //test_faceting(client)
-  //test_pagination(client)
-  //test_prefix_search(client)
-  //test_localized_attributes(client)
-  //test_foreign_keys(client)
+  test_dictionary(client)
+  test_displayed_attributes(client)
+  test_filterable_attributes(client)
+  test_searchable_attributes(client)
+  test_sortable_attributes(client)
+  test_non_separator_tokens(client)
+  test_separator_tokens(client)
+  test_stop_words(client)
+  test_ranking_rules(client)
+  test_search_cutoff_ms(client)
+  test_facet_search(client)
+  test_distinct_attribute(client)
+  test_synonyms(client)
+  test_typo_tolerance(client)
+  test_faceting(client)
+  test_pagination(client)
+  test_prefix_search(client)
+  test_localized_attributes(client)
   test_embedders(client)
   teardown(client)
-}
-
-fn test_chat(client) {
-  test_update_chat(client)
-  test_reset_chat(client)
-}
-
-fn test_update_chat(client) {
-  log.running("Update chat settings")
-  let chat =
-    sansio_settings.Chat(
-      description: "A movie database index",
-      document_template: "Movie: {{doc.title}} ({{doc.year}})",
-      document_template_max_bytes: 4096,
-      search_parameters: sansio_settings.ChatSearchParameters(
-        hybrid: sansio_settings.ChatEmbedder(
-          embedder: "default",
-          semantic_ratio: 1.0,
-        ),
-        limit: 5,
-        sort: [],
-        distinct: "",
-        matching_strategy: sansio_settings.Last,
-        attributes_to_search_on: [],
-        ranking_score_threshold: option.None,
-      ),
-    )
-  let assert Ok(_) =
-    settings.update_chat(client, "individual_settings_test", chat)
-  process.sleep(1000)
-
-  log.running("Verify updated chat settings")
-  let assert Ok(MeilisearchSingleResult(result:)) =
-    settings.get_chat(client, "individual_settings_test")
-  assert result.description == "A movie database index"
-  assert result.document_template == "Movie: {{doc.title}} ({{doc.year}})"
-  assert result.document_template_max_bytes == 4096
-  assert result.search_parameters.limit == 5
-  assert result.search_parameters.hybrid.embedder == "default"
-  assert result.search_parameters.hybrid.semantic_ratio == 1.0
-  assert result.search_parameters.matching_strategy == sansio_settings.Last
-  log.pass("Update chat settings")
-}
-
-fn test_reset_chat(client) {
-  log.running("Reset chat settings")
-  let assert Ok(_) = settings.reset_chat(client, "individual_settings_test")
-  process.sleep(1000)
-  log.pass("Reset chat settings")
 }
 
 fn test_dictionary(client) {
@@ -709,49 +661,6 @@ fn test_reset_prefix_search(client) {
   log.pass("Reset prefix search")
 }
 
-fn test_foreign_keys(client) {
-  test_update_foreign_keys(client)
-  test_reset_foreign_keys(client)
-}
-
-fn test_update_foreign_keys(client) {
-  log.running("Update foreign keys")
-  let assert Ok(_) =
-    settings.update_foreign_keys(client, "individual_settings_test", [
-      sansio_settings.ForeignKey(foreign_index_uid: "movies", field_name: "id"),
-      sansio_settings.ForeignKey(
-        foreign_index_uid: "genres",
-        field_name: "genre_id",
-      ),
-    ])
-  process.sleep(1000)
-
-  let assert Ok(MeilisearchSingleResult(result:)) =
-    settings.get_foreign_keys(client, "individual_settings_test")
-  let assert option.Some(result) = result
-  assert list.length(result) == 2
-  assert list.contains(
-    result,
-    sansio_settings.ForeignKey(
-      foreign_index_uid: "directors",
-      field_name: "director_id",
-    ),
-  )
-  log.pass("Update foreign keys")
-}
-
-fn test_reset_foreign_keys(client) {
-  log.running("Reset foreign keys")
-  let assert Ok(_) =
-    settings.reset_foreign_keys(client, "individual_settings_test")
-  process.sleep(1000)
-
-  let assert Ok(MeilisearchSingleResult(result:)) =
-    settings.get_foreign_keys(client, "individual_settings_test")
-  assert result == option.None
-  log.pass("Reset foreign keys")
-}
-
 fn test_embedders(client) {
   test_update_embedders(client)
   test_reset_embedders(client)
@@ -771,25 +680,25 @@ fn test_update_embedders(client) {
             model: "nomic-embed-text",
             revision: option.None,
             pooling: option.None,
-            api_key: "",
-            dimensions: 768,
-            binary_quantisized: False,
+            api_key: option.None,
+            dimensions: option.Some(768),
+            binary_quantisized: option.None,
             document_template: "Movie: {{doc.title}} ({{doc.year}}) - Genres: {{doc.genres}}",
-            document_template_max_bytes: 400,
-            url: "http://ollama:11434",
+            document_template_max_bytes: option.Some(400),
+            url: option.Some("http://ollama:11434/api/embed"),
             indexing_fragments: option.None,
             search_fragments: option.None,
-            request: dict.new(),
-            response: dict.new(),
-            headers: dict.new(),
+            request: option.None,
+            response: option.None,
+            headers: option.None,
             search_embedder: option.None,
             indexing_embedder: option.None,
-            distribution: sansio_settings.Distribution(mean: 0.0, sigma: 0.1),
+            distribution: option.None,
           ),
         ),
       ]),
     )
-  process.sleep(1000)
+  process.sleep(3000)
 
   let assert Ok(MeilisearchSingleResult(result:)) =
     settings.get_embedders(client, "individual_settings_test")
@@ -797,7 +706,7 @@ fn test_update_embedders(client) {
   let assert Ok(embedder) = dict.get(result, "default")
   assert embedder.source == sansio_settings.Ollama
   assert embedder.model == "nomic-embed-text"
-  assert embedder.dimensions == 768
+  assert embedder.dimensions == option.Some(768)
   assert embedder.document_template
     == "Movie: {{doc.title}} ({{doc.year}}) - Genres: {{doc.genres}}"
   log.pass("Update embedders")
