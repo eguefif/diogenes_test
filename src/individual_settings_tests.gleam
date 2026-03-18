@@ -32,7 +32,8 @@ pub fn run(client) {
   //test_pagination(client)
   //test_prefix_search(client)
   //test_localized_attributes(client)
-  test_foreign_keys(client)
+  //test_foreign_keys(client)
+  test_embedders(client)
   teardown(client)
 }
 
@@ -714,10 +715,7 @@ fn test_update_foreign_keys(client) {
   log.running("Update foreign keys")
   let assert Ok(_) =
     settings.update_foreign_keys(client, "individual_settings_test", [
-      sansio_settings.ForeignKey(
-        foreign_index_uid: "directors",
-        field_name: "director_id",
-      ),
+      sansio_settings.ForeignKey(foreign_index_uid: "movies", field_name: "id"),
       sansio_settings.ForeignKey(
         foreign_index_uid: "genres",
         field_name: "genre_id",
@@ -749,6 +747,66 @@ fn test_reset_foreign_keys(client) {
     settings.get_foreign_keys(client, "individual_settings_test")
   assert result == option.None
   log.pass("Reset foreign keys")
+}
+
+fn test_embedders(client) {
+  test_update_embedders(client)
+  test_reset_embedders(client)
+}
+
+fn test_update_embedders(client) {
+  log.running("Update embedders")
+  let assert Ok(_) =
+    settings.update_embedders(
+      client,
+      "individual_settings_test",
+      dict.from_list([
+        #(
+          "default",
+          sansio_settings.Embedder(
+            source: sansio_settings.UserProvided,
+            model: "",
+            revision: option.None,
+            pooling: sansio_settings.UseModel,
+            api_key: "",
+            dimensions: 512,
+            binary_quantisized: False,
+            document_template: "",
+            document_template_max_bytes: 400,
+            url: "",
+            indexing_fragments: dict.new(),
+            search_fragments: dict.new(),
+            request: dict.new(),
+            response: dict.new(),
+            headers: dict.new(),
+            search_embedder: option.None,
+            indexing_embedder: option.None,
+            distribution: sansio_settings.Distribution(mean: 0.0, sigma: 0.1),
+          ),
+        ),
+      ]),
+    )
+  process.sleep(1000)
+
+  let assert Ok(MeilisearchSingleResult(result:)) =
+    settings.get_embedders(client, "individual_settings_test")
+  assert dict.has_key(result, "default")
+  let assert Ok(embedder) = dict.get(result, "default")
+  assert embedder.source == sansio_settings.UserProvided
+  assert embedder.dimensions == 512
+  log.pass("Update embedders")
+}
+
+fn test_reset_embedders(client) {
+  log.running("Reset embedders")
+  let assert Ok(_) =
+    settings.reset_embedders(client, "individual_settings_test")
+  process.sleep(1000)
+
+  let assert Ok(MeilisearchSingleResult(result:)) =
+    settings.get_embedders(client, "individual_settings_test")
+  assert result == dict.new()
+  log.pass("Reset embedders")
 }
 
 fn setup(client) {
