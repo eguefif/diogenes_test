@@ -1,11 +1,14 @@
 import diogenes.{MeilisearchSingleResult}
+import diogenes/document
 import diogenes/index
+import diogenes/sansio/document as sansio_document
 import diogenes/sansio/settings as sansio_settings
 import diogenes/settings
+import document_tests.{Movie, movie_encoder}
 import gleam/dict
 import gleam/erlang/process
 import gleam/list
-import gleam/option.{Some}
+import gleam/option.{None, Some}
 import gleam/string
 import log
 
@@ -764,18 +767,18 @@ fn test_update_embedders(client) {
         #(
           "default",
           sansio_settings.Embedder(
-            source: sansio_settings.UserProvided,
-            model: "",
+            source: sansio_settings.Ollama,
+            model: "nomic-embed-text",
             revision: option.None,
-            pooling: sansio_settings.UseModel,
+            pooling: option.None,
             api_key: "",
-            dimensions: 512,
+            dimensions: 768,
             binary_quantisized: False,
-            document_template: "",
+            document_template: "Movie: {{doc.title}} ({{doc.year}}) - Genres: {{doc.genres}}",
             document_template_max_bytes: 400,
-            url: "",
-            indexing_fragments: dict.new(),
-            search_fragments: dict.new(),
+            url: "http://ollama:11434",
+            indexing_fragments: option.None,
+            search_fragments: option.None,
             request: dict.new(),
             response: dict.new(),
             headers: dict.new(),
@@ -792,8 +795,11 @@ fn test_update_embedders(client) {
     settings.get_embedders(client, "individual_settings_test")
   assert dict.has_key(result, "default")
   let assert Ok(embedder) = dict.get(result, "default")
-  assert embedder.source == sansio_settings.UserProvided
-  assert embedder.dimensions == 512
+  assert embedder.source == sansio_settings.Ollama
+  assert embedder.model == "nomic-embed-text"
+  assert embedder.dimensions == 768
+  assert embedder.document_template
+    == "Movie: {{doc.title}} ({{doc.year}}) - Genres: {{doc.genres}}"
   log.pass("Update embedders")
 }
 
@@ -812,6 +818,32 @@ fn test_reset_embedders(client) {
 fn setup(client) {
   let assert Ok(_) =
     index.create_index(client, "individual_settings_test", Some("id"))
+  process.sleep(1000)
+
+  let movies = [
+    Movie(id: 1, title: "Inception", year: 2010, genres: ["Sci-Fi", "Thriller"]),
+    Movie(id: 2, title: "The Dark Knight", year: 2008, genres: [
+      "Action",
+      "Crime",
+    ]),
+    Movie(id: 3, title: "Interstellar", year: 2014, genres: ["Sci-Fi", "Drama"]),
+    Movie(id: 4, title: "The Matrix", year: 1999, genres: ["Sci-Fi", "Action"]),
+  ]
+  let params =
+    sansio_document.AddDocumentsParams(
+      primary_key: None,
+      csv_delimiter: None,
+      custom_metadata: None,
+      skip_creation: None,
+    )
+  let assert Ok(_) =
+    document.add_or_replace_documents(
+      client,
+      "individual_settings_test",
+      movies,
+      params,
+      movie_encoder,
+    )
   process.sleep(1000)
 }
 
